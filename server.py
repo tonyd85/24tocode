@@ -1,12 +1,14 @@
-from collections import Counter
+from collections import defaultdict
 
 import falcon
 import json
 from falcon_cors import CORS
 
-cors = CORS(allow_all_origins=True)
 
+cors = CORS(allow_all_origins=True)
 api = falcon.API(middleware=[cors.middleware])
+
+sliding_window = defaultdict(list)
 
 def add_headers(response):
     response.set_header('Access-Control-Allow-Origin', '*')
@@ -14,19 +16,26 @@ def add_headers(response):
 
 headers={'Content-Type': 'application/json'}
 
-
-component_defect_counts = Counter()
-
-def get_vectors(counter):
-    if len(counter.keys()) == 0:
-        return {'x': [], 'y': []}
-    arr = zip(counter.keys(), counter.values())
-    sorted_arr = sorted(arr, key=lambda x: -x[1])
-    x, y = zip(*sorted_arr)
+window_length=1000
+def get_vectors(sliding_window):
+    if len(sliding_window) == 0:
+        return {
+            'x': [],
+            'y': []
+        }
+    kvpairs = [
+        (k, measure_window(v[-window_length:]) )
+        for k,v in sliding_window.items() ]
+    sorted_pairs = sorted(kvpairs, key=lambda x: x[1])
+    x, y = zip(*kvpairs) 
     return {
         'x': x,
         'y': y
     }
+
+def measure_window(window):
+    return 100 * sum(window) / len(window)
+
 
 valid_components = [
     'PN-0489',
@@ -48,7 +57,7 @@ class Resource:
     def on_get(self, req, resp):
         data = req.params
 
-        data = get_vectors(component_defect_counts)
+        data = get_vectors(sliding_window)
         data['type'] = 'bar'
         payload = {
             'component_defect_counts': [data]
@@ -65,10 +74,13 @@ class Resource:
         body = req.stream.read().decode('utf-8')
         data = json.loads(body)
         print(data)
-        if data['component'] in valid_components:
-            component_defect_counts.update([data['component']])
+        for component in valid_components:
+            if data['component'] == component:
+                sliding_window[component].append(1)
+            else:
+                sliding_window[component].append(0)
         resp.body = json.dumps({'data': {
-            'counts': dict(component_defect_counts)
+            'counts': '' 
         }})
         add_headers(resp)
         resp.status = falcon.HTTP_200
