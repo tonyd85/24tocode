@@ -1,0 +1,33 @@
+version: '2'
+services:
+    server:
+        build:
+            context: .
+            dockerfile: 'dockerfiles/server.Dockerfile'
+        ports:
+            - '8000:8000'
+        volumes:
+            - .:/home
+        command: 'gunicorn --reload server:api -b 0.0.0.0:8000'
+        working_dir: '/home'
+
+    client:
+        build:
+            context: .
+            dockerfile: 'dockerfiles/dashboard.Dockerfile'
+        ports:
+            - '8080:8080'
+        volumes:
+            - .:/home
+        command: 'live-server'
+        working_dir: '/home'
+    sensor:
+        build:
+            context: .
+            dockerfile: 'dockerfiles/server.Dockerfile'
+        volumes:
+            - .:/home
+        command: 'python sensor.py'
+        working_dir: '/home'
+
+

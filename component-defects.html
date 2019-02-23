@@ -1,0 +1,34 @@
+<html>
+    <head>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <style>
+            body {
+            }
+
+
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
+    </body>
+    <script>
+        function refreshData(){
+            fetch('http://localhost:8000/data').then(r => {
+                return r.json()
+            }).then(d => {
+                console.log(d)
+                Plotly.newPlot('root', d.component_defect_counts, {
+//                    plot_bgcolor: 'black',
+                    font: {
+                        color: 'green'
+                    }
+                });
+            })
+        }
+
+        setInterval(refreshData, 1000)
+        
+
+
+    </script>
+</html>
